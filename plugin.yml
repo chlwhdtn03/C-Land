@@ -1,0 +1,10 @@
+name: C-Land
+version: 1.0
+main: land.chlwhdtn.Land
+softdepend: [C-Economy]
+api-version: 1.13
+
+commands:
+  world:
+  land:
+  토지:
