@@ -41,6 +41,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 import economy.chlwhdtn.Economy;
 import economy.chlwhdtn.MoneyFileManager;
 import economy.chlwhdtn.MoneyManager;
+import mine.chlwhdtn.Mine;
+import mine.chlwhdtn.MineManager;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -279,6 +281,10 @@ public class LandTool implements CommandExecutor, Listener {
 
 	@EventHandler(priority = EventPriority.HIGH)
 	public void onBreak(BlockBreakEvent event) {
+		if(MineManager.isMinedBlock(event.getBlock().getLocation())) {
+			return;
+		}
+		
 		if (event.getBlock().getType().equals(Material.OAK_SIGN)) {
 			Sign sign = ((Sign) event.getBlock().getState());
 			if (sign.getLines()[0].equals("§a[토지]")) {
@@ -321,14 +327,17 @@ public class LandTool implements CommandExecutor, Listener {
 			event.setCancelled(true);
 		}
 
-		if (event.getBlock().getWorld().getName().equals("land"))
+		if (event.getBlock().getWorld().getName().equals("land")) {
 			event.setCancelled(true);
+		}
 	}
 
 	@EventHandler
 	public void onRightClick(PlayerInteractEvent event) {
-
 		if (event.getAction().equals(Action.RIGHT_CLICK_BLOCK) || event.getAction().equals(Action.LEFT_CLICK_BLOCK)) {
+			if(MineManager.isMinedBlock(event.getClickedBlock().getLocation())) {
+				return;
+			}
 			if (event.getClickedBlock().getType().equals(Material.OAK_SIGN)) {
 				Sign sign = ((Sign) event.getClickedBlock().getState());
 				if (sign.getLines()[0].equals("§a[토지]")) {
@@ -359,6 +368,22 @@ public class LandTool implements CommandExecutor, Listener {
 					yestext.setColor(ChatColor.GREEN);
 					event.getPlayer().spigot().sendMessage(text, yestext);
 				}
+			} else {
+				if (event.getPlayer().isOp())
+					return;
+				
+				if (LandManager.hasLand(event.getPlayer().getName())) {
+					for (Landata data : LandManager.getLands(event.getPlayer().getName())) {
+						if (isInRect(event.getClickedBlock(), new Location(event.getPlayer().getWorld(), data.startx, 0, data.startz),
+								new Location(event.getPlayer().getWorld(), data.endx, 0, data.endz))) {
+							return;
+						}
+					}
+					event.setCancelled(true);
+				}
+				
+				if (event.getClickedBlock().getWorld().getName().equals("land"))
+					event.setCancelled(true);
 			}
 		}
 	}

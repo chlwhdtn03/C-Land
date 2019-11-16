@@ -58,6 +58,7 @@ public class Land extends JavaPlugin implements CommandExecutor {
 		getCommand("world").setExecutor(this);
 		getCommand("land").setExecutor(new LandTool());
 		getCommand("토지").setExecutor(new LandUserCommand());
+		getCommand("spawn").setExecutor(new LandUserCommand());
 		
 		
 		// 이벤트

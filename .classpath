@@ -4,5 +4,6 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Minecraft Plugin"/>
 	<classpathentry kind="lib" path="C:/Users/Choi/Desktop/서버/plugins/C-Economy.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Choi/Desktop/서버/plugins/C-Mine.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -1,8 +1,12 @@
 package land.chlwhdtn;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -13,6 +17,30 @@ public class LandUserCommand implements CommandExecutor {
 
 	@Override
 	public boolean onCommand(CommandSender cs, Command cmd, String label, String[] args) {
+		
+		if(cmd.getName().equals("spawn")) {
+			if(((Player)cs).getLocation().getWorld().getName().equals("land")) {
+				cs.sendMessage("사용할 수 없습니다.");
+				return false;
+			}
+			Bukkit.getWorld("land").getSpawnLocation().add(0, -2, 0).getBlock().setType(Material.AIR);
+			Bukkit.getWorld("land").getSpawnLocation().add(-1, -2, 0).getBlock().setType(Material.AIR);
+			Bukkit.getWorld("land").getSpawnLocation().add(0, -2, -1).getBlock().setType(Material.AIR);
+			Bukkit.getWorld("land").getSpawnLocation().add(-1, -2, -1).getBlock().setType(Material.AIR);
+			((Player)cs).teleport(Bukkit.getWorld("land").getSpawnLocation());
+			Bukkit.getScheduler().scheduleSyncDelayedTask(Land.land, new Runnable() {
+				
+				@Override
+				public void run() {
+					Bukkit.getWorld("land").getSpawnLocation().add(0, -2, 0).getBlock().setType(Material.REDSTONE_BLOCK);
+					Bukkit.getWorld("land").getSpawnLocation().add(-1, -2, 0).getBlock().setType(Material.REDSTONE_BLOCK);
+					Bukkit.getWorld("land").getSpawnLocation().add(0, -2, -1).getBlock().setType(Material.REDSTONE_BLOCK);
+					Bukkit.getWorld("land").getSpawnLocation().add(-1, -2, -1).getBlock().setType(Material.REDSTONE_BLOCK);
+					Bukkit.getWorld("land").spawnParticle(Particle.EXPLOSION_HUGE, 0, 0, 0, 1);
+				}
+			}, 10L);
+			return true;
+		}
 
 		if (args.length == 0) {
 			cs.sendMessage(ChatColor.AQUA + "/토지 목록 - 자신이 소유하고 있는 토지의 목록을 확인합니다.");
@@ -24,9 +52,8 @@ public class LandUserCommand implements CommandExecutor {
 		if (args[0].equals("목록")) {
 			if (LandManager.hasLand(cs.getName()))
 				cs.sendMessage(prefix + ChatColor.AQUA + "가지고 있는 땅");
-			String str = "";
 			for (Landata land : LandManager.getLands(cs.getName())) {
-				cs.sendMessage(land.name + " + (화재 : " + (land.canburn ? "§cON" : "§aOFF") + " 폭발 : " + (land.canexplode ? "§cON" : "§aOFF"));
+				cs.sendMessage(land.name + " (화재 : " + (land.canburn ? "§cON" : "§aOFF") + " §f폭발 : " + (land.canexplode ? "§cON" : "§aOFF" ) + "§f)");
 			}
 		}
 
@@ -37,11 +64,13 @@ public class LandUserCommand implements CommandExecutor {
 					return false;
 				}
 				Landata land = LandManager.getLand(args[1]);
-				cs.sendMessage("-- " + land.name + " --");
+				cs.sendMessage(prefix + "-- " + land.name + " --");
 				cs.sendMessage("소유주 : " + (land.owner == null ? "매물입니다." : land.owner));
-				if(land.owner.equals(cs.getName())) {
-					cs.sendMessage("화재 : " + (land.canburn ? "§c으악 불이야!" : "§a블럭이 불에 타지 않습니다."));
-					cs.sendMessage("폭발 : " + (land.canexplode ? "§c뇌관 작동!" : "§a블럭이 폭발에 손실되지 않습니다."));
+				if(land.owner != null) {
+					if(land.owner.equals(cs.getName())) {
+						cs.sendMessage("화재 : " + (land.canburn ? "§c으악 불이야!" : "§a블럭이 불에 타지 않습니다."));
+						cs.sendMessage("폭발 : " + (land.canexplode ? "§c뇌관 작동!" : "§a블럭이 폭발에 손실되지 않습니다."));
+					}
 				}
 			} else {
 				cs.sendMessage("§c/토지 정보 <번호>");
