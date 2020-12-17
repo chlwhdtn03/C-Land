@@ -1,8 +1,12 @@
 package land.chlwhdtn;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Landata {
 	
 	public String owner = null, name;
+	public List<String> slaves = new ArrayList<String>();
 	public int startx,endx,startz,endz,size;
 	public boolean canburn = false, canexplode = false;
 	
@@ -26,17 +30,27 @@ public class Landata {
 		this.canburn = canburn;
 		this.canexplode = canexplode;
 	}
-
+	
 	public String getOwner() {
 		return owner;
 	}
 
 	public void setOwner(String playername) {
-		// TODO Auto-generated method stub
-		
+		owner = playername;
 	}
 	
+	public void addSlave(String playername) {
+		slaves.add(playername);
+	}
 	
+	public boolean isSlave(String playername) {
+		return slaves.contains(playername);
+	}
+	
+	public void removeSlave(String playername) {
+		slaves.remove(playername);
+	}
+	 
 	
 	
 

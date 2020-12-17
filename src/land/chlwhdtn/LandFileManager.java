@@ -3,12 +3,14 @@ package land.chlwhdtn;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.file.YamlConfigurationOptions;
 
 import economy.chlwhdtn.Economy;
+import net.md_5.bungee.api.ChatColor;
 
 public class LandFileManager {
 
@@ -28,6 +30,12 @@ public class LandFileManager {
 					LandConfig.getInt("Land." + name + ".endx"), LandConfig.getInt("Land." + name + ".startz"),
 					LandConfig.getInt("Land." + name + ".endz"), LandConfig.getInt("Land." + name + ".size"), LandConfig.getString("Land." + name + ".owner")
 					,LandConfig.getBoolean("Land." + name + ".canburn"),LandConfig.getBoolean("Land." + name + ".canexplode")));
+			List<String> list = (List<String>) LandConfig.getList("Land." + name + ".slave");
+			if(list != null) {
+				for(String slavename : list) {
+					LandManager.getLand(name).addSlave(slavename);
+				}
+			}
 		}
 	}
 
@@ -53,11 +61,12 @@ public class LandFileManager {
 				LandConfig.set("Land." + name + ".owner", LandManager.getLandMap().get(name).owner);
 				LandConfig.set("Land." + name + ".canburn", LandManager.getLandMap().get(name).canburn);
 				LandConfig.set("Land." + name + ".canexplode", LandManager.getLandMap().get(name).canexplode);
-			}
+				LandConfig.set("Land." + name + ".slave", LandManager.getLandMap().get(name).slaves);
 			getConfig().save(LandConfigFile);
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-
 }
+		

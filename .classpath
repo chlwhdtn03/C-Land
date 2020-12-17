@@ -3,7 +3,9 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Minecraft Plugin"/>
-	<classpathentry kind="lib" path="C:/Users/Choi/Desktop/서버/plugins/C-Economy.jar"/>
-	<classpathentry kind="lib" path="C:/Users/Choi/Desktop/서버/plugins/C-Mine.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/C-Economy"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/C-Gamble"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/C-Mine"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/C-Util"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -3,6 +3,7 @@ package land.chlwhdtn;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import org.bukkit.Difficulty;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Server.Spigot;
 import org.bukkit.SkullType;
 import org.bukkit.World.Environment;
@@ -35,13 +37,18 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.RenderType;
+import org.bukkit.scoreboard.Score;
+import org.bukkit.scoreboard.Scoreboard;
 
 import economy.chlwhdtn.Economy;
 import economy.chlwhdtn.MoneyFileManager;
 import economy.chlwhdtn.MoneyManager;
+import util.chlwhdtn.CUtil;
 
 public class Land extends JavaPlugin implements CommandExecutor {
-	
 	public static Land land;
 	@Override
 	public void onEnable() {
@@ -60,7 +67,6 @@ public class Land extends JavaPlugin implements CommandExecutor {
 		getCommand("토지").setExecutor(new LandUserCommand());
 		getCommand("spawn").setExecutor(new LandUserCommand());
 		
-		
 		// 이벤트
 		
 		Bukkit.getPluginManager().registerEvents(new LandTool(), this);
@@ -71,7 +77,7 @@ public class Land extends JavaPlugin implements CommandExecutor {
 																				.generateStructures(false)
 																				.type(WorldType.FLAT));
 		world.setGameRule(GameRule.KEEP_INVENTORY, true);
-		world.setDifficulty(Difficulty.PEACEFUL);
+		world.setDifficulty(Difficulty.NORMAL);
 		world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
 		world.setSpawnLocation(0, 4, 0);
 		
@@ -81,26 +87,45 @@ public class Land extends JavaPlugin implements CommandExecutor {
 			
 			@Override
 			public void run() {
+				Scoreboard sb;
+				for(Player p : Bukkit.getOnlinePlayers()) {
+					CUtil.updateScoreboard(p);
+				}
 				Iterator it = sortByValue(MoneyManager.getMoneyMap()).iterator();
 				for(int i = 0; i < 3; i++) {
 					Location loc = new Location(Bukkit.getWorld("land"), Bukkit.getWorld("land").getSpawnLocation().add(-3, 0, 0).getX(), 5, Bukkit.getWorld("land").getSpawnLocation().add(0, 0, 4-i).getZ());
-					String pname = it.next().toString();
-					loc.getBlock().setType(Material.PLAYER_HEAD);
-					Skull skull = (Skull) loc.getBlock().getState(); // make sure to import org.bukkit.block.Skull;
-					skull.setRotation(BlockFace.SOUTH_WEST);
-					skull.setOwningPlayer(Bukkit.getOfflinePlayer(pname));
-					skull.update();
+					try {
+						String pname = it.next().toString();
+						loc.getBlock().setType(Material.PLAYER_HEAD);
+						Skull skull = (Skull) loc.getBlock().getState(); // make sure to import org.bukkit.block.Skull;
+						skull.setRotation(BlockFace.SOUTH_WEST);
+						skull.setOwningPlayer(Bukkit.getOfflinePlayer(pname));
+						skull.update();
 					
-					loc.add(1, -1, 0);
-					loc.getBlock().setType(Material.BIRCH_WALL_SIGN);
-					Sign s = (Sign) loc.getBlock().getState();
-					WallSign ws = (WallSign) loc.getBlock().getState().getBlockData();
-					ws.setFacing(BlockFace.EAST);
-					s.setBlockData(ws);
-					s.setLine(0, (i+1)+"위");
-					s.setLine(1, pname);
-					s.setLine(2, String.format("%,d원", MoneyManager.getMoney(pname)));
-					s.update();
+						loc.add(1, -1, 0);
+						loc.getBlock().setType(Material.BIRCH_WALL_SIGN);
+						Sign s = (Sign) loc.getBlock().getState();
+						WallSign ws = (WallSign) loc.getBlock().getState().getBlockData();
+						ws.setFacing(BlockFace.EAST);
+						s.setBlockData(ws);
+						s.setLine(0, (i+1)+"위");
+						s.setLine(1, pname);
+						s.setLine(2, String.format("%,d원", MoneyManager.getMoney(pname)));
+						s.update();
+					} catch(Exception e) {
+						loc.getBlock().setType(Material.PLAYER_HEAD);
+						Skull skull = (Skull) loc.getBlock().getState();
+						skull.setRotation(BlockFace.SOUTH_WEST);
+						skull.update();
+						loc.add(1, -1, 0);
+						loc.getBlock().setType(Material.BIRCH_WALL_SIGN);
+						Sign s = (Sign) loc.getBlock().getState();
+						WallSign ws = (WallSign) loc.getBlock().getState().getBlockData();
+						ws.setFacing(BlockFace.EAST);
+						s.setBlockData(ws);
+						s.setLine(0, "서버에 사람이 없어요 :(");
+						s.update();
+					}
 				
 				}
 			}

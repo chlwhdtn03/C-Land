@@ -6,13 +6,18 @@ import java.util.List;
 
 public class LandManager {
 	private static HashMap<String, Landata> hashmap = new HashMap<String, Landata>();
-	public static int landprice = 75000;
+	public static int landprice = 100000; // 10X10 기준
 	public static int default_size = 10;
 	public static void setLandOwner(String land, String playername) {
 		hashmap.get(land).owner = playername;
 	}
-	public static Landata addLand(int startx, int startz, int size) {
-		String key = "1-"+(hashmap.size() + 1);
+	public static Landata addLand(int firstID, int startx, int startz, int size) {
+		String key = firstID + "-1";
+		int i = 2;
+		while(isLand(key)) {
+			key = firstID + "-"+i;
+			i++;
+		}
 		Landata data =  new Landata(key,startx,startx+(size-1),startz,startz+(size-1), size);
 		hashmap.put(key,data);
 		return data;
