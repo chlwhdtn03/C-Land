@@ -26,7 +26,7 @@ public class LandManager {
 		return hashmap.get(string);
 	}
 	public static int getLandPrice(String string) {
-		return (int)((double)((double)landprice * ((double)((double)hashmap.get(string).size / (double)default_size))));
+		return (int)((double)((double)landprice * ((double)Math.pow(((double)hashmap.get(string).size / (double)default_size), 2))));
 	}
 	public static void LoadLand(String key, Landata data) {
 		hashmap.put(key, data);

@@ -81,6 +81,7 @@ public class LandUserCommand implements CommandExecutor {
 			cs.sendMessage(ChatColor.AQUA + "/토지 공유 <번호> <플레이어> - 소유중인 <토지>를 <플레이어>와 공유합니다.");
 			cs.sendMessage(ChatColor.AQUA + "/토지 취소 <번호> <플레이어> - <플레이어>와의 <토지>공유를 끝냅니다.");
 			cs.sendMessage(ChatColor.AQUA + "/토지 정보 <번호> - 토지 정보를 확인합니다.");
+			cs.sendMessage(ChatColor.AQUA + "/토지 판매 <번호> - 토지를 처분합니다. 주의. 모든 블럭, 설정, 공유 설정이 해제됩니다.");
 			cs.sendMessage(ChatColor.AQUA + "/토지 설정 <번호> [<burn>,<explode>] - 토지의 외부요인을 설정합니다");
 			return true;
 		}
@@ -145,7 +146,36 @@ public class LandUserCommand implements CommandExecutor {
 			}
 		}
 		
-			
+		if (args[0].equals("판매")) {
+			if (args.length == 2) {
+				if (!LandManager.isLand(args[1])) {
+					cs.sendMessage(prefix + "§c존재하지 않는 땅 입니다.");
+					return false;
+				}
+				if(LandManager.getLand(args[1]).owner == null) {
+					cs.sendMessage(prefix + "§c당신은 그 땅의 주인이 아닙니다.");
+					return false;
+				}
+				if(!LandManager.getLand(args[1]).owner.equals(cs.getName()) ){
+					cs.sendMessage(prefix + "§c당신은 그 땅의 주인이 아닙니다.");
+					return false;
+				}
+				
+				Landata land = LandManager.getLand(args[1]);
+				
+				land.owner = null;
+				land.canburn =false;
+				land.canexplode= false;
+				land.slaves.clear();
+				land.reset();
+				
+				cs.sendMessage(prefix + "§a땅 판매 잔금을 받기 위해 " + land.name + "의 토지 표지판을 부셔주세요! ");
+				
+			} else {
+				cs.sendMessage("§c/토지 판매 <번호>");
+				cs.sendMessage("§c판매 하는 순간, 모든 블럭, 토지 설정이 초기화됩니다.");
+			}
+		}
 
 		if (args[0].equals("정보")) {
 			if (args.length == 2) {
@@ -157,7 +187,7 @@ public class LandUserCommand implements CommandExecutor {
 				cs.sendMessage(prefix + "-- " + land.name + " --");
 				cs.sendMessage("소유주 : " + (land.owner == null ? "매물입니다." : land.owner));
 				if(land.owner != null) {
-					if(land.owner.equals(cs.getName())) {
+					if(land.owner.equals(cs.getName()) || land.slaves.stream().anyMatch(name->name.equals(cs.getName())) || cs.isOp()) {
 						cs.sendMessage("화재 : " + (land.canburn ? "§c으악 불이야!" : "§a블럭이 불에 타지 않습니다."));
 						cs.sendMessage("폭발 : " + (land.canexplode ? "§c뇌관 작동!" : "§a블럭이 폭발에 손실되지 않습니다."));
 						if(land.slaves.isEmpty() == false) {

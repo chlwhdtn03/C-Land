@@ -2,6 +2,7 @@ package land.chlwhdtn;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -35,6 +36,8 @@ public class LandFileManager {
 				for(String slavename : list) {
 					LandManager.getLand(name).addSlave(slavename);
 				}
+			} else {
+				LandManager.getLand(name).slaves = new ArrayList<>();
 			}
 		}
 	}

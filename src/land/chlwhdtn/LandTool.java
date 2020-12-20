@@ -59,6 +59,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.vehicle.VehicleDamageEvent;
 import org.bukkit.event.world.PortalCreateEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -69,6 +70,7 @@ import org.bukkit.scoreboard.RenderType;
 import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.util.Vector;
+import org.yaml.snakeyaml.tokens.FlowMappingEndToken;
 
 import economy.chlwhdtn.Economy;
 import economy.chlwhdtn.MoneyFileManager;
@@ -97,6 +99,7 @@ public class LandTool implements CommandExecutor, Listener {
 			cs.sendMessage("/land sign - 토지 생성 도구 (반드시 교육 후 사용하세요 pdf참고)");
 			cs.sendMessage("/land price <가격> - 토지 가격을 설정합니다. (현재 토지 가격(10x10기준) : " + LandManager.landprice + ")");
 			cs.sendMessage("/land snow - 크리스마스! 스폰구역에 눈이 내립니다!");
+			cs.sendMessage("/land reset <땅번호> - 초기화");
 			return true;
 		}
 
@@ -152,6 +155,28 @@ public class LandTool implements CommandExecutor, Listener {
 			return true;
 		}
 
+		if (args[0].equals("reset")) {
+
+			if (cs.isOp() == false)
+				return false;
+			if (!(cs instanceof Player))
+				return false;
+			if (args.length == 2) {
+				if (LandManager.isLand(args[1]) == false) {
+					cs.sendMessage("§c존재하지 않는 땅입니다.");
+					return false;
+				}
+				LandManager.getLand(args[1]).owner = null;
+				LandManager.getLand(args[1]).canburn =false;
+				LandManager.getLand(args[1]).canexplode= false;
+				LandManager.getLand(args[1]).slaves.clear();
+				LandManager.getLand(args[1]).reset();
+				LandFileManager.saveConfig();
+				cs.sendMessage("§a" + args[1] + "를 초기화했습니다.");
+			} 
+			return true;
+		}
+		
 		if (args[0].equals("price")) {
 
 			if (cs.isOp() == false)
@@ -372,13 +397,13 @@ public class LandTool implements CommandExecutor, Listener {
 
 				if (LandManager.isLand(sign.getLines()[1])) { // 유효한 땅 표지판일 경우
 					Landata data = LandManager.getLand(sign.getLines()[1]);
-					if (event.getPlayer().getName().equals(data.owner) || event.getPlayer().isOp()) { // 땅 주인이 표지판을 건드리면
+					if (event.getPlayer().getName().equals(data.owner) || (event.getPlayer().isOp() && data.owner != null)) { // 땅 주인이 표지판을 건드리면
 																										// (오피가 건드려도)
 																										// 새로고침
 						sign.setLine(0, "§a[토지]");
 						sign.setLine(1, data.name);
 						if (data.owner != null) {
-							sign.setLine(2, "소유주 : " + data.owner);
+							sign.setLine(2, data.owner);
 						} else {
 							sign.setLine(2, "매물 : " + String.format("%,d원", LandManager.getLandPrice(data.name)));
 						}
@@ -388,6 +413,29 @@ public class LandTool implements CommandExecutor, Listener {
 						}
 						event.setCancelled(true);
 						return;
+					} else {
+						if(sign.getLine(2).equals(event.getPlayer().getName()) || (event.getPlayer().isOp() && !sign.getLine(2).startsWith("매물")) ) {
+							System.out.println(data.name + " 판매됨 " + Math.round(LandManager.getLandPrice(data.name)*0.8));
+							MoneyManager.addMoney(event.getPlayer().getName(), Math.round(LandManager.getLandPrice(data.name)*0.8));
+							event.getPlayer().sendMessage("§a" + data.name + "가 정상적으로 판매되었습니다. 값 : " + Math.round(LandManager.getLandPrice(data.name)*0.8));
+							MoneyFileManager.saveConfig();
+							LandFileManager.saveConfig();
+							
+							sign.setLine(0, "§a[토지]");
+							sign.setLine(1, data.name);
+							if (data.owner != null) {
+								sign.setLine(2, data.owner);
+							} else {
+								sign.setLine(2, "매물 : " + String.format("%,d원", LandManager.getLandPrice(data.name)));
+							}
+							sign.setLine(3, (data.endx - data.startx + 1) + "x" + (data.endz - data.startz + 1));
+							if (sign.update()) {
+								event.getPlayer().playSound(sign.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
+							}
+							event.setCancelled(true);
+							return;
+							
+						}
 					}
 					event.setCancelled(true);
 				}
@@ -417,15 +465,19 @@ public class LandTool implements CommandExecutor, Listener {
 	@EventHandler
 	public void onRightClick(PlayerInteractEvent event) {
 		if (event.getAction().equals(Action.PHYSICAL)) {
-			if(event.getClickedBlock().getLocation().getBlockX() == -8 || event.getClickedBlock().getLocation().getBlockY() == 8 || event.getClickedBlock().getLocation().getBlockZ() == 23) { // 점프맵 1단계 보상
-				CUtil.setScore(event.getPlayer(), "pakuru", "파쿠르", 1);
-				event.getPlayer().sendMessage(ChatColor.GREEN + "[파쿠르] 이제 더블점프가 가능합니다!");
-				return;
-			} else if(event.getClickedBlock().getLocation().getBlockX() == -25 || event.getClickedBlock().getLocation().getBlockY() == 10 || event.getClickedBlock().getLocation().getBlockZ() == 19) { // 점프맵 2단계 보상
+			if(event.getClickedBlock().getLocation().getBlockX() == -8 && event.getClickedBlock().getLocation().getBlockY() == 8 && event.getClickedBlock().getLocation().getBlockZ() == 23) { // 점프맵 1단계 보상
+				if(CUtil.getScore(event.getPlayer(), "pakuru") < 1) {
+					CUtil.setScore(event.getPlayer(), "pakuru", "파쿠르", 1);
+					event.getPlayer().sendMessage(ChatColor.GREEN + "[파쿠르] 이제 더블점프가 가능합니다!");
+					return;
+				}
+			} else if(event.getClickedBlock().getLocation().getBlockX() == 25 && event.getClickedBlock().getLocation().getBlockY() == 4 && event.getClickedBlock().getLocation().getBlockZ() == -14) { // 점프맵 2단계 보상
+				if(CUtil.getScore(event.getPlayer(), "pakuru") < 2) {
 					CUtil.setScore(event.getPlayer(), "pakuru", "파쿠르", 2);
-				event.getPlayer().sendMessage(ChatColor.GREEN + "[파쿠르] 더블점프가 2단계로 향상됩니다!");
-				return;
-			}
+					event.getPlayer().sendMessage(ChatColor.GREEN + "[파쿠르] 더블점프가 2단계로 향상됩니다!");
+					return;
+				}
+			} 
 
 			for (Landata data : LandManager.getLandMap().values()) {
 				if (data.getOwner() == null) {
@@ -454,26 +506,30 @@ public class LandTool implements CommandExecutor, Listener {
 			if (MineManager.isMinedBlock(event.getClickedBlock().getLocation())) {
 				return;
 			}
+			
 			Machine target;
 			if ((target = MachineManager.getMachineButton(event.getClickedBlock().getLocation())) != null) {
 				if (!event.getAction().equals(Action.RIGHT_CLICK_BLOCK))
 					return;
+				if (event.getHand().equals(EquipmentSlot.OFF_HAND))
+					return;
+				int cost = 5000;
 				if (target.isRunning) {
 					event.getPlayer().sendMessage("§c해당 기계가 작동중입니다. 끝날때까지 기다려주세요.");
 					return;
 				}
 
-				if (!MoneyManager.hasEnoghMoney(event.getPlayer().getName(), 3000)) {
+				if (!MoneyManager.hasEnoghMoney(event.getPlayer().getName(), cost)) {
 					event.getPlayer().sendMessage("§c돈이 모자랍니다.");
 					return;
 				}
 				if (event.getPlayer().isOp() == false) {
-					MoneyManager.addMoney(event.getPlayer().getName(), -3000);
+					MoneyManager.addMoney(event.getPlayer().getName(), -cost);
 					MoneyFileManager.saveConfig();
 				}
 				Sign sign = ((Sign) Bukkit.getWorld("land").getBlockAt(-11, 6, 10).getState());
 				long origin = Long.parseLong(sign.getLine(1));
-				origin += 3000;
+				origin += cost;
 				sign.setLine(1, origin + "");
 				sign.setLine(2, "마지막 이용자");
 				sign.setLine(3, event.getPlayer().getName());
@@ -530,8 +586,8 @@ public class LandTool implements CommandExecutor, Listener {
 								case EMERALD_BLOCK:
 									Bukkit.broadcastMessage(
 											"§a[도박장] " + event.getPlayer().getName() + "님이 2등에 당첨됬습니다!");
-									MoneyManager.addMoney(event.getPlayer().getName(), 200000);
-									origin += 200000;
+									MoneyManager.addMoney(event.getPlayer().getName(), 150000);
+									origin += 150000;
 									sign.setLine(1, origin + "");
 									sign.update();
 									break;
@@ -549,6 +605,7 @@ public class LandTool implements CommandExecutor, Listener {
 								MoneyFileManager.saveConfig();
 							} else {
 								event.getPlayer().sendMessage("§c꽝입니다...");
+								
 							}
 							target.isRunning = false;
 							Bukkit.getScheduler().cancelTask(thisid);
@@ -651,6 +708,7 @@ public class LandTool implements CommandExecutor, Listener {
 										new Location(event.getPlayer().getWorld(), data.startx, 0, data.startz),
 										new Location(event.getPlayer().getWorld(), data.endx, 0, data.endz))) {
 									event.getPlayer().sendMessage(data.name + " 토지 입니다.");
+									event.getPlayer().sendMessage("주인 : " + data.owner);
 								}
 							}
 						}
@@ -865,32 +923,16 @@ public class LandTool implements CommandExecutor, Listener {
 			CUtil.addTempScore(e.getEntity().getKiller(), "아레나 포인트", 1 + CUtil.getScore(e.getEntity(), "아레나 포인트") / 2);
 			System.out.println(CUtil.getScore(e.getEntity().getKiller(), "아레나 포인트") + 1
 					+ CUtil.getScore(e.getEntity(), "아레나 포인트") / 2);
-//			Scoreboard sb = e.getEntity().getKiller().getScoreboard();
-//			Objective obj;
-//			if ((obj = sb.getObjective("stat")) == null) {
-//				sb = Bukkit.getScoreboardManager().getNewScoreboard();
-//				obj = sb.registerNewObjective("stat", "dummy", "상태", RenderType.INTEGER);
-//			}
-//			obj.setDisplaySlot(DisplaySlot.SIDEBAR);
-//
-//			obj.getScore("아레나 포인트").setScore(obj.getScore("아레나 포인트").getScore() + 1
-//					+ e.getEntity().getScoreboard().getObjective("stat").getScore("아레나 포인트").getScore() / 2);
-//			
-
-//			if ((e.getEntity().getScoreboard().getObjective("stat").getScore("아레나 포인트").getScore() / 2) >= 1) {
 			if (CUtil.getScore(e.getEntity(), "아레나 포인트") / 2 >= 1) {
 				e.getEntity().getKiller().sendMessage("§7[§5PVP 아레나§7]§b 연속 처치자를 죽여 "
 						+ CUtil.getScore(e.getEntity(), "아레나 포인트") / 2 + "점을 추가 획득했습니다");
 			}
-//			if (obj.getScore("아레나 포인트").getScore() == 5) {
 			if (CUtil.getScore(e.getEntity().getKiller(), "아레나 포인트") == 5) {
 				Bukkit.broadcastMessage("§7[§5PVP 아레나§7]§b " + e.getEntity().getKiller().getName() + "님이 5점을 획득했습니다.");
 			} else if (CUtil.getScore(e.getEntity().getKiller(), "아레나 포인트") == 10) {
 				Bukkit.broadcastMessage("§7[§5PVP 아레나§7]§b " + e.getEntity().getKiller().getName() + "님이 10점을 획득했습니다.");
 			}
 			int deader_point;
-//			if ((deader_point = e.getEntity().getScoreboard().getObjective("stat").getScore("아레나 포인트")
-//					.getScore()) >= 5) {
 			if ((deader_point = CUtil.getScore(e.getEntity(), "아레나 포인트")) >= 5) {
 				Bukkit.broadcastMessage(
 						"§7[§5PVP 아레나§7]§b " + e.getEntity().getName() + "님이 " + deader_point + "점을 얻고 전사했습니다.");
@@ -907,10 +949,10 @@ public class LandTool implements CommandExecutor, Listener {
 	public void onLeave(PlayerQuitEvent event) {
 		if (isInRect(event.getPlayer().getLocation().getBlock(), new Location(null, -26, 21, -22),
 				new Location(null, -13, 21, -4))) { // PVP장에서
-			if (event.getPlayer().getHealth() != event.getPlayer().getAttribute(Attribute.GENERIC_MAX_HEALTH)
-					.getValue()) {
-				CUtil.addScore(event.getPlayer(), "penalty", "비매너", 1);
-			}
+//			if (event.getPlayer().getHealth() != event.getPlayer().getAttribute(Attribute.GENERIC_MAX_HEALTH)
+//					.getValue()) { // 체력이 없는 상태에서 중도 퇴장시
+//				CUtil.addScore(event.getPlayer(), "penalty", "비매너", 1);
+//			}
 		}
 	}
 
@@ -1052,55 +1094,55 @@ public class LandTool implements CommandExecutor, Listener {
 
 	@EventHandler
 	public void onPortal(PlayerPortalEvent event) {
-		if (event.getFrom().getWorld().getName().equals("land")) {
-			event.setCancelled(true);
-
-			CUtil.addTempScore(event.getPlayer(), "아레나 포인트", 0);
-
-//			Scoreboard sb = event.getPlayer().getScoreboard();
-//			Objective obj;
-//			if ((obj = sb.getObjective("stat")) == null) {
-//				sb = Bukkit.getScoreboardManager().getNewScoreboard();
-//				obj = sb.registerNewObjective("stat", "dummy", "상태", RenderType.INTEGER);
-//			}
-//			obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+//		if (event.getFrom().getWorld().getName().equals("land")) {
+//			event.setCancelled(true);
 //
-//			obj.getScore("아레나 포인트").setScore(0);
+//			CUtil.addTempScore(event.getPlayer(), "아레나 포인트", 0);
 //
-//			event.getPlayer().setScoreboard(sb);
-
-//			if(event.getPlayer().isOp() == false) {
-//				if(!MoneyManager.hasEnoghMoney(event.getPlayer().getName(), 5000)) {
-//					event.getPlayer().sendMessage("§c가지고 있는 돈이 부족합니다.");
-//					return;
+////			Scoreboard sb = event.getPlayer().getScoreboard();
+////			Objective obj;
+////			if ((obj = sb.getObjective("stat")) == null) {
+////				sb = Bukkit.getScoreboardManager().getNewScoreboard();
+////				obj = sb.registerNewObjective("stat", "dummy", "상태", RenderType.INTEGER);
+////			}
+////			obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+////
+////			obj.getScore("아레나 포인트").setScore(0);
+////
+////			event.getPlayer().setScoreboard(sb);
+//
+////			if(event.getPlayer().isOp() == false) {
+////				if(!MoneyManager.hasEnoghMoney(event.getPlayer().getName(), 5000)) {
+////					event.getPlayer().sendMessage("§c가지고 있는 돈이 부족합니다.");
+////					return;
+////				}
+////				
+////				MoneyManager.addMoney(event.getPlayer().getName(), -5000);
+////				MoneyFileManager.saveConfig();
+////			}
+//			Location loc = null;
+//			double randomX;
+//			double randomZ;
+//			int randomXW;
+//			int randomZW;
+//			while (true) {
+//				randomX = new Random().nextInt(13) + -26;
+//				randomZ = new Random().nextInt(18) + -22;
+//				loc = new Location(Bukkit.getWorld("land"), randomX, 7, randomZ);
+//				if (loc.add(0, -1, 0).getBlock().getType().equals(Material.WATER)
+//						|| loc.add(0, -1, 0).getBlock().getType().equals(Material.BLACK_CONCRETE)) {
+//					continue;
 //				}
-//				
-//				MoneyManager.addMoney(event.getPlayer().getName(), -5000);
-//				MoneyFileManager.saveConfig();
+//				break;
 //			}
-			Location loc = null;
-			double randomX;
-			double randomZ;
-			int randomXW;
-			int randomZW;
-			while (true) {
-				randomX = new Random().nextInt(13) + -26;
-				randomZ = new Random().nextInt(18) + -22;
-				loc = new Location(Bukkit.getWorld("land"), randomX, 7, randomZ);
-				if (loc.add(0, -1, 0).getBlock().getType().equals(Material.WATER)
-						|| loc.add(0, -1, 0).getBlock().getType().equals(Material.BLACK_CONCRETE)) {
-					continue;
-				}
-				break;
-			}
-			event.getPlayer().setAllowFlight(false);
-			event.getPlayer().teleport(loc);
-			event.getPlayer().sendMessage("§aPVP장으로 이동되었습니다!");
-			event.getPlayer().sendMessage("§a여기서 플레이어를 죽일때마다 아레나 포인트를 획득합니다.");
-			event.getPlayer().sendMessage("§b죽거나 돌아갈 경우 아레나 포인트를 통해 보상을 지급합니다");
-			event.getPlayer().sendMessage("§b돌아가시려면 /spawn을 입력하세요!");
-			return;
-		}
+//			event.getPlayer().setAllowFlight(false);
+//			event.getPlayer().teleport(loc);
+//			event.getPlayer().sendMessage("§aPVP장으로 이동되었습니다!");
+//			event.getPlayer().sendMessage("§a여기서 플레이어를 죽일때마다 아레나 포인트를 획득합니다.");
+//			event.getPlayer().sendMessage("§b죽거나 돌아갈 경우 아레나 포인트를 통해 보상을 지급합니다");
+//			event.getPlayer().sendMessage("§b돌아가시려면 /spawn을 입력하세요!");
+//			return;
+//		}
 		event.setCancelled(true);
 	}
 
